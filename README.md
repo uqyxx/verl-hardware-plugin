@@ -21,7 +21,7 @@ The platforms and engines in this repository are **reference implementations** �
 |----------|--------|---------------|--------|-----|
 | FlagOS | NVIDIA GPU (verified) | FlagCX / NCCL | ✅ Supported | [User Guide](docs/user_guide_flagos/nvidia/README.md) |
 | Intel XPU | Data Center GPU Max / Arc | xccl (oneCCL) | ✅ Example (requires vendor support) | TBD |
-| Cambricon MLU | MLU370 / MLU590 | CNCL | ✅ Supported | [User Guide](docs/user_guide_mlu/README.md) |
+| Cambricon MLU | MLU590 | CNCL | ✅ Supported | [User Guide](docs/user_guide_mlu/README.md) |
 | MetaX | MetaX GPUs (CUDA-compatible) | MCCL | ✅ Supported | [User Guide](docs/user_guide_metax/README.md) |
 | Huawei NPU | Ascend 910B | HCCL | Built-in (verl core) | [Ascend Tutorial](https://github.com/verl-project/verl/tree/main/docs/ascend_tutorial) |
 | Iluvatar | BI-V150 (CUDA-compatible) | IXCCL | ✅ Supported | [User Guide](docs/user_guide_iluvatar/README.md) |
@@ -82,7 +82,7 @@ This check is only performed during first-time auto-detection. The `is_available
 Each hardware platform provides a standalone user guide (following the structure of [verl/docs/ascend_tutorial](https://github.com/verl-project/verl/tree/main/docs/ascend_tutorial)):
 
 - **[Intel XPU](docs/user_guide_xpu/README.md)** — Intel Data Center GPU Max / Arc user guide
-- **[Cambricon MLU](docs/user_guide_mlu/README.md)** — Cambricon MLU370 / MLU590 user guide
+- **[Cambricon MLU](docs/user_guide_mlu/README.md)** — Cambricon MLU590 user guide
 - **[MetaX GPU](docs/user_guide_metax/README.md)** — MetaX GPU user guide
 - **[FlagOS](docs/user_guide_flagos/README.md)** — FlagOS unified heterogeneous engine user guide ([NVIDIA](docs/user_guide_flagos/nvidia/README.md))
 
