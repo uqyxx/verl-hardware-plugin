@@ -18,8 +18,6 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import AsyncGenerator, Generator
 
-import numpy as cp
-
 import nixl._api as nixl_api
 import nixl._bindings as nixl_bindings
 import ray
@@ -266,14 +264,8 @@ class CNIXLCheckpointEngine(CheckpointEngine):
         """
         # For master process, use cupy instead of torch to avoid memory register error
         # when `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`.
-        if self.device == "mlu":
-            send_buf = cp.zeros(self.bucket_size, dtype=cp.uint8)
-            recv_buf = cp.zeros(self.bucket_size, dtype=cp.uint8)
-            self.send_buf = torch.as_tensor(send_buf, dtype=torch.uint8)
-            self.recv_buf = torch.as_tensor(recv_buf, dtype=torch.uint8)
-        else:
-            self.send_buf = torch.zeros(self.bucket_size, dtype=torch.uint8, device=self.device, pin_memory=True)
-            self.recv_buf = torch.zeros(self.bucket_size, dtype=torch.uint8, device=self.device, pin_memory=True)
+        self.send_buf = torch.zeros(self.bucket_size, dtype=torch.uint8, device=self.device)
+        self.recv_buf = torch.zeros(self.bucket_size, dtype=torch.uint8, device=self.device)
         self.send_reg_descs = self.agent.register_memory(self.send_buf)
         self.recv_reg_descs = self.agent.register_memory(self.recv_buf)
         self.send_descs = self.agent.get_xfer_descs(self.send_buf)
