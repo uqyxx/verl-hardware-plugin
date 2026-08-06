@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# mypy: disable-error-code="attr-defined"
 import logging
 import os
 import time
@@ -56,7 +58,7 @@ class BroadcastOperation:
         process_group: StatelessProcessGroup | str,
         bucket: torch.Tensor,
         metadata: dict[str, TensorMeta] | None,
-        socket: zmq.Socket,
+        socket: zmq.Socket,  # type: ignore[name-defined]
         topic: str,
     ) -> None:
         self.rank = rank
