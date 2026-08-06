@@ -16,7 +16,7 @@ import time
 import uuid
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from typing import AsyncGenerator, Generator, Optional
+from typing import AsyncGenerator, Generator
 
 import nixl._api as nixl_api
 import nixl._bindings as nixl_bindings
