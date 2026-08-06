@@ -16,7 +16,7 @@ import time
 import uuid
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from typing import AsyncGenerator, Generator
+from typing import AsyncGenerator, Generator, Optional
 
 import nixl._api as nixl_api
 import nixl._bindings as nixl_bindings
@@ -119,7 +119,7 @@ class NixlAgent:
         socket = self.zmq_clients[agent_name]
         socket.send_pyobj((self.agent_name, message), zmq.DONTWAIT)
 
-    async def read_message(self, agent_name: str) -> dict:
+    async def read_message(self, agent_name: str) -> Optional[dict]:
         while len(self.messages[agent_name]) == 0:
             recv_agent_name, message = await self.socket.recv_pyobj()
             self.messages[recv_agent_name].append(message)

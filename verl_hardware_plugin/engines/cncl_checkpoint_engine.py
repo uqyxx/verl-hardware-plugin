@@ -15,7 +15,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass
-from typing import AsyncGenerator, Generator
+from typing import AsyncGenerator, Generator, Optional
 
 import ray
 import torch
@@ -55,7 +55,7 @@ class BroadcastOperation:
         rank: int,
         process_group: StatelessProcessGroup | str,
         bucket: torch.Tensor,
-        metadata: dict[str, TensorMeta],
+        metadata: dict[str, TensorMeta] | None,
         socket: zmq.Socket,
         topic: str,
     ) -> None:
@@ -124,7 +124,7 @@ class CNCLCheckpointEngine(CheckpointEngine):
             self._start_zmq_server()
             self.dist_port, _ = get_free_port(self.ip)
 
-    def prepare(self) -> MasterMetadata:
+    def prepare(self) -> Optional[MasterMetadata]:
         self.send_buf = torch.zeros(self.bucket_size, dtype=torch.uint8, device="mlu")
         self.recv_buf = torch.zeros(self.bucket_size, dtype=torch.uint8, device="mlu")
 
