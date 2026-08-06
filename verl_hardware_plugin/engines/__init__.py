@@ -85,7 +85,7 @@ def register_all_engines():
         logger.debug("MLU Megatron engines not registered: %s", e)
 
     try:
-        from verl_hardware_plugin.engines import cncl_checkpoint_engine, cnixl_checkpoint_engine
+        from verl_hardware_plugin.engines import cncl_checkpoint_engine, cnixl_checkpoint_engine  # noqa: F401
 
         logger.info("Registered engines: cncl_checkpoint_engine, cnixl_checkpoint_engine")
     except Exception as e:
