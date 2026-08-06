@@ -119,7 +119,7 @@ class NixlAgent:
         socket = self.zmq_clients[agent_name]
         socket.send_pyobj((self.agent_name, message), zmq.DONTWAIT)
 
-    async def read_message(self, agent_name: str) -> Optional[dict]:
+    async def read_message(self, agent_name: str):
         while len(self.messages[agent_name]) == 0:
             recv_agent_name, message = await self.socket.recv_pyobj()
             self.messages[recv_agent_name].append(message)
@@ -191,7 +191,7 @@ class ReadOperation:
         self.bucket_size = bucket_size
         self.start_time = None
 
-    async def read_metadata(self) -> dict:
+    async def read_metadata(self) -> dict | None:
         """Block until the remote agent sends the metadata.
 
         Returns:

@@ -80,7 +80,7 @@ class BroadcastOperation:
         # broadcast tensor via CNCL
         self.pycncl.broadcast(self.bucket, src=0)
 
-    async def wait_for_complete(self) -> dict[str, TensorMeta]:
+    async def wait_for_complete(self):
         """Wait for the broadcast operation to complete.
 
         Returns:
