@@ -25,7 +25,7 @@ class MegatronMLUEngineWithLMHead(MegatronEngineWithLMHead):
 @EngineRegistry.register(model_type="value_model", backend="megatron", device="mlu", vendor="cambricon")
 class MegatronMLUEngineWithValueHead(MegatronEngineWithValueHead):
     """Megatron Engine for Cambricon MLU value model training."""
-    
+
     def initialize(self):
         super().initialize()
         logger.info("MegatronMLUEngineWithValueHead initialized for MLU")
