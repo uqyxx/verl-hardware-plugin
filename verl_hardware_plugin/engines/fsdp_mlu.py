@@ -11,6 +11,7 @@ from verl.workers.config import FSDPEngineConfig, FSDPOptimizerConfig, HFModelCo
 from verl.workers.engine.base import EngineRegistry
 from verl.workers.engine.fsdp import FSDPEngineWithLMHead
 from verl.workers.engine.fsdp.transformer_impl import FSDPEngineWithValueHead
+from verl_hardware_plugin.utils import linear_cross_entropy  # noqa: F401
 
 logger = logging.getLogger(__name__)
 logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
