@@ -29,5 +29,5 @@ jobs:
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -e ".[dev]"
 
-      - name: Run plugin registration tests
-        run: pytest -q tests/test_plugin_registration.py
+      - name: Run CPU test suite
+        run: pytest -q tests
