@@ -178,6 +178,11 @@ def set_backward_method(backward_method: BackwardEnum):
             num_stages=3,
             num_warps=4,
         ),
+        triton.Config(
+            {"BLOCK_SIZE_M": 256, "BLOCK_SIZE_N": 256, "BLOCK_SIZE_K": 128},
+            num_stages=3,
+            num_warps=1,
+        ),
     ],
     key=["num_tokens", "hidden_size", "vocab_size"],
 )
@@ -294,6 +299,9 @@ def efficient_entropy_kernel_general_mainloop(
             # scale logits by temperature
             logits *= rcp_temperature
 
+            if start_offs_bn + BLOCK_SIZE_N > vocab_size:
+                logits = tl.where(offs_bn[None, :] < vocab_size, logits, -1e9)
+
             # update global maximum
             _max_old = _max
             m_pid_n = tl.max(logits, axis=1)
@@ -394,6 +402,7 @@ def efficient_entropy_triton_kernel_epilogue(
         lse = tl.log(global_accu) + global_max
         global_logprobs_ptrs = global_logprobs_ptr + offs_m_cur * stride_global_logprobs
         global_logprobs = tl.load(global_logprobs_ptrs, mask=mask_m) - lse
+        global_logprobs = tl.where(mask_m, global_logprobs, 0.0)
         tl.store(global_max_ptr + offs_m_cur * stride_global_max, global_max, mask=mask_m)
         tl.store(
             global_entropy_b_ptr + offs_m_cur * stride_global_entropy_b,
@@ -566,6 +575,10 @@ def efficient_entropy_triton_epilogue_tp_update(
 
         logprobs = tl.load(logprobs_ptr + offs_m_cur * stride_logprobs, mask=mask_m, other=0)
         logprobs = logprobs - tmp
+        # Zero invalid lanes once at the source (see efficient_entropy_triton_kernel_epilogue);
+        # the none-reduction store is masked so zeroed lanes are discarded, while sum/mean would
+        # otherwise pick up garbage on out-of-range tokens.
+        logprobs = tl.where(mask_m, logprobs, 0.0)
 
         if reduction == 0:
             tl.store(logprobs_ptr + offs_m_cur * stride_logprobs, logprobs, mask=mask_m)
@@ -645,7 +658,7 @@ def efficient_entropy_forward(
     if REDUCTION == EntropyReductionEnum._None:
         _logprobs = logprobs
     else:
-        _logprobs = torch.empty((num_tokens,), device=hidden.device, dtype=torch.float32)
+        _logprobs = torch.zeros((num_tokens,), device=hidden.device, dtype=torch.float32)
 
     assert _accu.is_contiguous() and _entropy_b.is_contiguous() and _max.is_contiguous()
     assert _is_on_accelerator(_accu) and _is_on_accelerator(_entropy_b) and _is_on_accelerator(_max)
@@ -793,6 +806,11 @@ def efficient_entropy_forward(
             {"BLOCK_SIZE_M": 128, "BLOCK_SIZE_N": 64, "BLOCK_SIZE_K": 512, "GROUP_SIZE_M": 16},
             num_stages=3,
             num_warps=4,
+        ),
+        triton.Config(
+            {"BLOCK_SIZE_M": 128, "BLOCK_SIZE_N": 128, "BLOCK_SIZE_K": 256, "GROUP_SIZE_M": 16},
+            num_stages=1,
+            num_warps=1,
         ),
     ],
     key=["num_tokens", "hidden_size", "vocab_size"],
@@ -1010,6 +1028,11 @@ def efficient_entropy_backward_kernel_general_mainloop_MN(
             num_stages=3,
             num_warps=4,
         ),
+        triton.Config(
+            {"BLOCK_SIZE_M": 128, "BLOCK_SIZE_N": 64, "BLOCK_SIZE_K": 256, "GROUP_SIZE_M": 16},
+            num_stages=3,
+            num_warps=1,
+        ),
     ],
     key=["num_tokens", "hidden_size", "vocab_size"],
 )
@@ -1169,6 +1192,11 @@ def efficient_entropy_backward_kernel_d_hidden(
             num_stages=2,
             num_warps=4,
         ),
+        triton.Config(
+            {"BLOCK_SIZE_M": 64, "BLOCK_SIZE_N": 128, "BLOCK_SIZE_K": 256},
+            num_stages=2,
+            num_warps=1,
+        ),
     ],
     key=["num_tokens", "hidden_size", "vocab_size"],
 )
@@ -1310,6 +1338,11 @@ def efficient_entropy_backward_kernel_d_hidden_mouter(
         triton.Config(
             {"BLOCK_SIZE_M": 256, "BLOCK_SIZE_N": 64, "BLOCK_SIZE_K": 512, "GROUP_SIZE_M": 16},
             num_stages=3,
+            num_warps=4,
+        ),
+        triton.Config(
+            {"BLOCK_SIZE_M": 256, "BLOCK_SIZE_N": 128, "BLOCK_SIZE_K": 512, "GROUP_SIZE_M": 16},
+            num_stages=1,
             num_warps=4,
         ),
     ],
@@ -1483,6 +1516,11 @@ def efficient_entropy_backward_kernel_d_weight(
             num_stages=3,
             num_warps=4,
         ),
+        triton.Config(
+            {"BLOCK_SIZE_M": 128, "BLOCK_SIZE_N": 128, "BLOCK_SIZE_K": 256},
+            num_stages=1,
+            num_warps=1,
+        ),
     ],
     key=["num_tokens", "hidden_size", "vocab_size"],
 )
@@ -1642,6 +1680,11 @@ def efficient_entropy_backward_kernel_d_weight_mouter(
             {"BLOCK_SIZE_M": 256, "BLOCK_SIZE_N": 128, "BLOCK_SIZE_K": 512, "GROUP_SIZE_M": 16},
             num_stages=3,
             num_warps=8,
+        ),
+        triton.Config(
+            {"BLOCK_SIZE_M": 256, "BLOCK_SIZE_N": 64, "BLOCK_SIZE_K": 256, "GROUP_SIZE_M": 16},
+            num_stages=3,
+            num_warps=1,
         ),
     ],
     key=["num_tokens", "hidden_size", "vocab_size"],
@@ -1819,6 +1862,11 @@ def efficient_entropy_backward_kernel_general_d_logits(
             {"BLOCK_SIZE_M": 256, "BLOCK_SIZE_N": 128, "BLOCK_SIZE_K": 512, "GROUP_SIZE_M": 16},
             num_stages=3,
             num_warps=8,
+        ),
+        triton.Config(
+            {"BLOCK_SIZE_M": 256, "BLOCK_SIZE_N": 64, "BLOCK_SIZE_K": 256, "GROUP_SIZE_M": 16},
+            num_stages=3,
+            num_warps=1,
         ),
     ],
     key=["num_tokens", "hidden_size", "vocab_size"],
@@ -2229,9 +2277,13 @@ def launch_efficient_entropy_backward_kernel_d_weight(
     rcp_temperature: float,
 ):
     if _d_weight_use_mouter(num_tokens, hidden_size):
-        grid = ((num_tokens + _D_WEIGHT_MOUTER_BM - 1) // _D_WEIGHT_MOUTER_BM,)
+
+        def _mouter_grid(meta):
+            bm = meta["BLOCK_SIZE_M"]
+            return ((num_tokens + bm - 1) // bm,)
+
         d_weight.zero_()
-        efficient_entropy_backward_kernel_d_weight_mouter[grid](
+        efficient_entropy_backward_kernel_d_weight_mouter[_mouter_grid](
             num_tokens,
             hidden_size,
             vocab_size,
@@ -2319,16 +2371,13 @@ def launch_efficient_entropy_backward_kernel_d_hidden(
     rcp_temperature: float,
 ):
     if _d_hidden_use_mouter(num_tokens, hidden_size):
-        grid = ((num_tokens + _D_HIDDEN_MOUTER_BM - 1) // _D_HIDDEN_MOUTER_BM,)
-        #     # The M-outer kernel reduces d_hidden across vocab pairs with ``tl.atomic_add``
-        #     # (vs the pair kernel's disjoint writes). Each launch must therefore start
-        #     # from a zeroed d_hidden so the atomics accumulate exactly one full gradient
-        #     # rather than piling onto whatever the caller left in the buffer. zero_() is a
-        #     # single device memset — negligible vs the 100-1100 ms kernel, and it makes
-        #     # repeated launches (warmup / do_bench) correctness-neutral, matching the pair
-        #     # kernel's overwrite-on-every-launch contract.
+
+        def _mouter_grid(meta):
+            bm = meta["BLOCK_SIZE_M"]
+            return ((num_tokens + bm - 1) // bm,)
+
         d_hidden.zero_()
-        efficient_entropy_backward_kernel_d_hidden_mouter[grid](
+        efficient_entropy_backward_kernel_d_hidden_mouter[_mouter_grid](
             num_tokens,
             hidden_size,
             vocab_size,
