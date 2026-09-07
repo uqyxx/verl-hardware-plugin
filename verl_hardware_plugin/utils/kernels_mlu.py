@@ -1199,6 +1199,7 @@ def efficient_entropy_backward_kernel_d_hidden(
         ),
     ],
     key=["num_tokens", "hidden_size", "vocab_size"],
+    reset_to_zero=["d_hidden_ptr"],
 )
 @triton.jit
 def efficient_entropy_backward_kernel_d_hidden_mouter(
@@ -1523,6 +1524,7 @@ def efficient_entropy_backward_kernel_d_weight(
         ),
     ],
     key=["num_tokens", "hidden_size", "vocab_size"],
+    reset_to_zero=["d_weight_ptr"],
 )
 @triton.jit
 def efficient_entropy_backward_kernel_d_weight_mouter(
