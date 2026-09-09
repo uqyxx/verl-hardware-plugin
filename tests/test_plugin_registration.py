@@ -4,10 +4,62 @@
 """Tests for plugin registration mechanism."""
 
 import os
+import sys
 from contextlib import contextmanager
+from types import ModuleType
 from unittest import mock
 
 import pytest
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _stub_training_engine_runtimes():
+    """Keep decorator tests independent of optional GPU training runtimes.
+
+    These tests exercise registration metadata, not FSDP or Megatron execution.
+    The lightweight bases let the complete registry suite run on a CPU-only CI host.
+    """
+
+    class _ImportPlaceholder:
+        pass
+
+    fsdp = ModuleType("verl.workers.engine.fsdp")
+    fsdp.FSDPEngine = _ImportPlaceholder
+    fsdp.FSDPEngineWithLMHead = _ImportPlaceholder
+
+    fsdp_transformer = ModuleType("verl.workers.engine.fsdp.transformer_impl")
+    fsdp_transformer.FSDPEngine = _ImportPlaceholder
+    fsdp_transformer.FSDPEngineWithLMHead = _ImportPlaceholder
+    fsdp_transformer.FSDPEngineWithValueHead = _ImportPlaceholder
+
+    megatron_transformer = ModuleType("verl.workers.engine.megatron.transformer_impl")
+    megatron_transformer.MegatronEngine = _ImportPlaceholder
+    megatron_transformer.MegatronEngineWithLMHead = _ImportPlaceholder
+    megatron_transformer.MegatronEngineWithValueHead = _ImportPlaceholder
+
+    engine_modules = {
+        "verl.workers.engine.fsdp": fsdp,
+        "verl.workers.engine.fsdp.transformer_impl": fsdp_transformer,
+        "verl.workers.engine.megatron.transformer_impl": megatron_transformer,
+    }
+    with (
+        mock.patch.dict(os.environ, {"VERL_USE_EXTERNAL_PLUGINS": "none"}),
+        mock.patch.dict(sys.modules, engine_modules),
+    ):
+        from verl.workers.engine.base import BaseEngine
+
+        class _StubEngine(BaseEngine):
+            pass
+
+        fsdp.FSDPEngine = _StubEngine
+        fsdp.FSDPEngineWithLMHead = _StubEngine
+        fsdp_transformer.FSDPEngine = _StubEngine
+        fsdp_transformer.FSDPEngineWithLMHead = _StubEngine
+        fsdp_transformer.FSDPEngineWithValueHead = _StubEngine
+        megatron_transformer.MegatronEngine = _StubEngine
+        megatron_transformer.MegatronEngineWithLMHead = _StubEngine
+        megatron_transformer.MegatronEngineWithValueHead = _StubEngine
+        yield
 
 
 @contextmanager
@@ -57,6 +109,14 @@ class TestPlatformRegistration:
         assert "iluvatar" in PlatformRegistry.registered_names()
         cls = PlatformRegistry.get("iluvatar")
         assert cls is PlatformIluvatar
+
+    def test_musa_registered(self):
+        from verl.plugin.platform.platform_manager import PlatformRegistry
+        from verl_hardware_plugin.platforms.platform_musa import PlatformMUSA  # noqa: F401
+
+        assert "musa" in PlatformRegistry.registered_names()
+        cls = PlatformRegistry.get("musa")
+        assert cls is PlatformMUSA
 
     def test_xpu_detection_with_env(self):
         from verl.plugin.platform.platform_manager import _detect_platform_name
@@ -139,6 +199,22 @@ class TestPlatformRegistration:
         with _fresh_registries():
             with mock.patch.dict(os.environ, {"VERL_PLATFORM": "iluvatar"}):
                 assert _detect_platform_name() == "iluvatar"
+
+    def test_musa_detection_with_env(self):
+        from verl.plugin.platform.platform_manager import _detect_platform_name
+        from verl_hardware_plugin.platforms.platform_musa import PlatformMUSA  # noqa: F401
+
+        with _fresh_registries():
+            with mock.patch.dict(os.environ, {"VERL_PLATFORM": "musa"}):
+                assert _detect_platform_name() == "musa"
+
+    def test_musa_device_and_vendor_names(self):
+        from verl_hardware_plugin.platforms.platform_musa import PlatformMUSA
+
+        platform = PlatformMUSA()
+        assert platform.device_name == "musa"
+        assert platform.vendor_name == "moore_threads"
+        assert platform.communication_backend_name() == "mccl"
 
 
 class TestEngineRegistration:
@@ -231,6 +307,39 @@ class TestEngineRegistration:
             EngineRegistry._engines["language_model"]["megatron"][("cuda", "iluvatar")]
             is MegatronIluvatarEngineWithLMHead
         )
+
+    def test_megatron_musa_engine_registered(self):
+        from verl.workers.engine.base import EngineRegistry
+        from verl_hardware_plugin.engines.megatron_musa import (
+            MegatronMUSAEngineWithLMHead,
+            MegatronMUSAEngineWithValueHead,
+        )
+
+        assert (
+            EngineRegistry._engines["language_model"]["megatron"][("musa", "moore_threads")]
+            is MegatronMUSAEngineWithLMHead
+        )
+        assert (
+            EngineRegistry._engines["value_model"]["megatron"][("musa", "moore_threads")]
+            is MegatronMUSAEngineWithValueHead
+        )
+
+    def test_fsdp_musa_engines_registered(self):
+        from verl.workers.engine.base import EngineRegistry
+        from verl_hardware_plugin.engines.fsdp_musa import (
+            FSDPMUSAEngineWithLMHead,
+            FSDPMUSAEngineWithValueHead,
+        )
+
+        for backend in ("fsdp", "fsdp2"):
+            assert (
+                EngineRegistry._engines["language_model"][backend][("musa", "moore_threads")]
+                is FSDPMUSAEngineWithLMHead
+            )
+            assert (
+                EngineRegistry._engines["value_model"][backend][("musa", "moore_threads")]
+                is FSDPMUSAEngineWithValueHead
+            )
 
     def test_fsdp_enflame_engines_registered(self):
         from verl.workers.engine.base import EngineRegistry
@@ -361,23 +470,19 @@ class TestMayEnableFlagGems:
             # Should not raise
             may_enable_flag_gems(phase="training")
 
-    def test_skips_when_already_imported(self):
-        import sys
-
+    def test_reuses_already_imported_module(self):
         from verl_hardware_plugin.utils import may_enable_flag_gems
 
         # Simulate flag_gems already loaded
         fake_module = mock.MagicMock()
+        fake_module.__version__ = "0.1.0"
         with mock.patch.dict(os.environ, {"TRAINING_FL_FLAGGEMS_ENABLE": "1"}):
             with mock.patch.dict(sys.modules, {"flag_gems": fake_module}):
-                # Should return early without calling flag_gems.enable
                 may_enable_flag_gems(phase="training")
-                fake_module.enable.assert_not_called()
+                fake_module.enable.assert_called_once_with(record=True, once=True, path=None)
                 fake_module.only_enable.assert_not_called()
 
     def test_enable_all_ops(self):
-        import sys
-
         from verl_hardware_plugin.utils import may_enable_flag_gems
 
         fake_module = mock.MagicMock()
@@ -396,8 +501,6 @@ class TestMayEnableFlagGems:
                     fake_module.enable.assert_called_once()
 
     def test_raises_on_whitelist_and_blacklist(self):
-        import sys
-
         from verl_hardware_plugin.utils import may_enable_flag_gems
 
         fake_module = mock.MagicMock()

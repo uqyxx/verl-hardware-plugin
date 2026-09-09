@@ -78,3 +78,11 @@ def register_all_platforms():
         logger.info("Registered platform: iluvatar (cuda)")
     except Exception as e:
         logger.debug("Iluvatar platform not registered: %s", e)
+
+    # Moore Threads MUSA — requires torch_musa and the MUSA runtime.
+    try:
+        from verl_hardware_plugin.platforms import platform_musa  # noqa: F401
+
+        logger.info("Registered platform: moore_threads (musa)")
+    except Exception as e:
+        logger.debug("MUSA platform not registered: %s", e)
