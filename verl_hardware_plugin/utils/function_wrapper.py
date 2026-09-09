@@ -74,7 +74,7 @@ class WrapperContext:
         self.orig_func = orig_func
 
     def __call__(self, *arg, **kwargs):
-        return self.wrapper_func(self, *arg, *kwargs)
+        return self.wrapper_func(self, *arg, **kwargs)
 
 
 class FunctionWrapper:

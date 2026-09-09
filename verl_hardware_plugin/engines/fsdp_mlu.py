@@ -11,7 +11,6 @@ from verl.workers.config import FSDPEngineConfig, FSDPOptimizerConfig, HFModelCo
 from verl.workers.engine.base import EngineRegistry
 from verl.workers.engine.fsdp import FSDPEngineWithLMHead
 from verl.workers.engine.fsdp.transformer_impl import FSDPEngineWithValueHead
-from verl_hardware_plugin.utils import linear_cross_entropy  # noqa: F401
 
 logger = logging.getLogger(__name__)
 logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
@@ -33,6 +32,8 @@ class FSDPMLUEngineWithLMHead(FSDPEngineWithLMHead):
 
     def initialize(self):
         super().initialize()
+        from verl_hardware_plugin.utils import linear_cross_entropy  # noqa: F401
+
         logger.info("FSDPMLUEngineWithLMHead initialized for MLU")
 
 
@@ -52,3 +53,4 @@ class FSDPMLUEngineWithValueHead(FSDPEngineWithValueHead):
 
     def initialize(self):
         super().initialize()
+        from verl_hardware_plugin.utils import linear_cross_entropy  # noqa: F401
