@@ -276,9 +276,6 @@ def efficient_entropy_kernel_general_mainloop(
         pid_m = tile_idx % num_pid_m
         pid_n = tile_idx // num_pid_m
 
-        if pid_m == 0 and pid_n == 0:
-            tl.store(global_logprobs_scalar_ptr, 0.0)
-
         # create pointers for the first blocks of hidden
         start_offs_am = pid_m * BLOCK_SIZE_M
         offs_am = start_offs_am + tl.arange(0, BLOCK_SIZE_M)
@@ -419,11 +416,11 @@ def efficient_entropy_triton_kernel_epilogue(
         accu_ptrs = accu_ptr + offs_m_cur[:, None] * stride_accu_m + offs_n[None, :] * stride_accu_n
         entropy_b_ptrs = entropy_b_ptr + offs_m_cur[:, None] * stride_entropy_b_m + offs_n[None, :] * stride_entropy_b_n
 
-        _max = tl.load(max_ptrs, mask=mask_n)
+        _max = tl.load(max_ptrs, mask=mask_n, other=-float("inf"))
         global_max = tl.max(_max, axis=1)
         _scale = tl.exp(_max - global_max[:, None])
-        _accu = tl.load(accu_ptrs, mask=mask_n)
-        _entropy_b = tl.load(entropy_b_ptrs, mask=mask_n)
+        _accu = tl.load(accu_ptrs, mask=mask_n, other=0.0)
+        _entropy_b = tl.load(entropy_b_ptrs, mask=mask_n, other=0.0)
         global_accu = tl.sum(_scale * _accu, axis=1)
         global_entropy_b = tl.sum(_scale * _entropy_b, axis=1)
 
@@ -510,20 +507,24 @@ def efficient_entropy_triton_kernel_epilogue_tp(
             _reduced_max = tl.load(
                 reduced_max_ptr + offs_m_cur[:, None] * stride_reduced_max_m + offs_n[None, :] * stride_reduced_max_n,
                 mask=mask_n,
+                other=-float("inf"),
             )
             _original_max = tl.load(
                 original_max_ptr
                 + offs_m_cur[:, None] * stride_original_max_m
                 + offs_n[None, :] * stride_original_max_n,
                 mask=mask_n,
+                other=-float("inf"),
             )
             _accu = tl.load(
                 accu_ptr + offs_m_cur[:, None] * stride_accu_m + offs_n[None, :] * stride_accu_n,
                 mask=mask_n,
+                other=0.0,
             )
             _entropy_b = tl.load(
                 entropy_b_ptr + offs_m_cur[:, None] * stride_entropy_b_m + offs_n[None, :] * stride_entropy_b_n,
                 mask=mask_n,
+                other=0.0,
             )
 
             _max_old = global_max
