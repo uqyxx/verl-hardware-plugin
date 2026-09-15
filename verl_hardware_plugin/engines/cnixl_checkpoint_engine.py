@@ -264,7 +264,7 @@ class CNIXLCheckpointEngine(CheckpointEngine):
     def prepare(self) -> NixlAgentMetadata:
         # Only register on the first round; reuse in subsequent rounds,
         # to avoid memory leaks caused by repeated registration and deallocation in each round.
-        # Set set_expandable_segments=False before register buffer to avoid memory register buffer
+        # Set set_expandable_segments=False before register buffer to avoid memory register buffer error
         if getattr(self, "send_buf", None) is None:
             set_expandable_segments(False)
             self.send_buf = torch.zeros(self.bucket_size, dtype=torch.uint8, device=self.device)
