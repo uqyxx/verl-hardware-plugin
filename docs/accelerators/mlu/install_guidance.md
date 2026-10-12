@@ -1,6 +1,6 @@
 # Cambricon Installation Guide
 
-Last updated: 06/16/2026.
+Last updated: 12/10/2026.
 
 ## Prerequisites
 
@@ -56,6 +56,8 @@ verl is the RL training framework. For detailed installation options, see: [verl
 
 verl-hardware-plugin provides the Cambricon hardware platform integration for verl. For detailed information, see: [verl-hardware-plugin](https://github.com/verl-project/verl-hardware-plugin).
 
+In [requirements_mlu.txt](./requirements_mlu.txt), we provide all other packages needed for MLU.
+
 ```bash
 # Install verl
 git clone https://github.com/verl-project/verl
@@ -66,5 +68,9 @@ pip install -e .
 git clone https://github.com/verl-project/verl-hardware-plugin.git
 cd verl-hardware-plugin
 pip install -e .
+
+# Intsall other packages
+cd verl-hardware-plugin
+pip install -r docs/user_guide_mlu/requirements_mlu.txt 
 ```
-Other dependency like Vllm, Ray are already installed in cambricon images. Now you can run a verl script.
+Other dependency like vLLM, Ray are already installed in cambricon images. Now you can run a verl script.
