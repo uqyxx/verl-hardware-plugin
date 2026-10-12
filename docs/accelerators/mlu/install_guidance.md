@@ -1,7 +1,5 @@
 # Cambricon Installation Guide
 
-Last updated: 12/10/2026.
-
 ## Prerequisites
 
 - Docker environment
@@ -40,7 +38,7 @@ pip install TransferQueue
 
 ### Download model
 ```bash
-cd /root
+cd /workspace
 
 # Download model (example: Qwen3-0.6B)
 modelscope download --model Qwen/Qwen3-0.6B --local_dir ./Qwen3-0.6B
@@ -68,9 +66,7 @@ pip install -e .
 git clone https://github.com/verl-project/verl-hardware-plugin.git
 cd verl-hardware-plugin
 pip install -e .
-
 # Install other packages
-cd verl-hardware-plugin
 pip install -r docs/accelerators/mlu/requirements_mlu.txt
 ```
 Other dependency like vLLM, Ray are already installed in cambricon images. Now you can run a verl script.

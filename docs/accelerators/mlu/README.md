@@ -1,7 +1,5 @@
 # Cambricon MLU User Guide
 
-Last updated: 12/10/2026.
-
 ## Introduction
 
 This document describes how to use verl for reinforcement learning training on Cambricon MLU.

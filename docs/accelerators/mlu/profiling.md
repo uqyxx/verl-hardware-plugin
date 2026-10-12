@@ -1,7 +1,5 @@
 # Cambricon MLU Profiling Guide
 
-Last updated: 06/24/2026.
-
 This guide describes the default profiling support adapted in `verl-hardware-plugin` for Cambricon MLU. The default path reuses verl community `global_profiler.tool=torch` and adds MLU activity support.
 
 ## Prerequisites
