@@ -96,7 +96,7 @@ MLU 支持 Megatron 和 Megatron-Bridge，且已经预安装在 cambricon_releas
 | `actor_rollout_ref.actor.megatron.pipeline_model_parallel_size`  |流水并行大小，默认值为1|
 | `actor_rollout_ref.actor.megatron.expert_model_parallel_size` | 专家并行大小，默认值为1|
 | `actor_rollout_ref.actor.megatron.expert_tensor_parallel_size`|TP拓展EP大小，默认值为null|
-| `actor_rollout_ref.actor.context_parallel_size`|上下文并行大小，默认值为1|
+| `actor_rollout_ref.actor.megatron.context_parallel_size`|上下文并行大小，默认值为1|
 | `actor_rollout_ref.actor.megatron.override_transformer_config.persist_layer_norm` |是否使用持久化 LayerNorm，默认值为False|
 | `actor_rollout_ref.actor.megatron.override_transformer_config.moe_grouped_gemm` |是否使用Group GEMM，默认值为False|
 | `actor_rollout_ref.actor.megatron.override_transformer_config.moe_router_dtype` |用于路由和专家输出加权平均的数据类型。使用 fp32 或 fp64 可以提高稳定性，尤其是在专家数量较多时，默认值为fp32|
