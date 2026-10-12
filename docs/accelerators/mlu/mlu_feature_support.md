@@ -77,7 +77,7 @@ MLU 支持 FSDP1 和 FSDP2，主要参数如下：
 | `actor_rollout_ref.actor.fsdp_config.param_offload` |是否卸载模型权重到CPU，默认值为False|
 | `actor_rollout_ref.actor.fsdp_config.optimizer_offload` |是否卸载优化器状态到CPU，默认值为False|
 | `actor_rollout_ref.actor.fsdp_config.reshard_after_forward` |控制前向计算后的参数行为，平衡内存与通信。默认值为True：前向后重新分片参数，反向时重新全收集|
-| `actor_rollout_ref.actor.fsdp_config.fsdp_size` | 每个FSDP分片组中的NPU数量；默认值-1表示自动。|
+| `actor_rollout_ref.actor.fsdp_config.fsdp_size` | 每个FSDP分片组中的MLU数量；默认值-1表示自动。|
 | `actor_rollout_ref.actor.ulysses_sequence_parallel_size`|Ulysses序列并行大小|
 | `actor_rollout_ref.actor.entropy_from_logits_with_chunking`|通过分块计算熵以减少显存峰值，默认值为False|
 | `actor_rollout_ref.actor.fsdp_config.entropy_checkpointing`|在训练时对熵计算启用重计算,降低显存峰值，默认值为False|
@@ -124,7 +124,7 @@ MLU 支持 Megatron 和 Megatron-Bridge，且已经预安装在 cambricon_releas
 | 特性 | 说明 |
 | -------- | --- |
 | SFT 训练 | 使用verl框架进行sft训练，运行脚本参考[SFT example](https://github.com/verl-project/verl/tree/main/examples/sft/gsm8k) |
-| on policy distillation 训练 | OPD 在学生策略采样得到的状态上，将教师模型的知识蒸馏到学生模型。对比监督微调 (SFT) 或者标准知识蒸馏 (KD)，OPD 对齐训练阶段与推理阶段的状态，从而缓解暴露偏差。<br>运行及其详细说明见 [OPD example](This trainer jointly trains a student model with policy-gradient on-policy rollouts and a distillation loss against a frozen teacher model served by a separate Ray cluster. Compared to pure SFT from teacher generations, on-policy distillation typically closes more of the teacher/student gap at the same compute budget.)。|
+| on policy distillation 训练 | OPD 在学生策略采样得到的状态上，将教师模型的知识蒸馏到学生模型。对比监督微调 (SFT) 或者标准知识蒸馏 (KD)，OPD 对齐训练阶段与推理阶段的状态，从而缓解暴露偏差。<br>运行及其详细说明见 [OPD example](https://github.com/verl-project/verl/tree/main/examples/on_policy_distillation_trainer)。|
 | Router Replay | Router Replay 是 verl 框架中面向混合专家（MoE）模型的高级路由回放功能。它通过记录并重放路由决策来实现确定性训练，保证训练计算多次之间模型行为保持一致。 |
 
 

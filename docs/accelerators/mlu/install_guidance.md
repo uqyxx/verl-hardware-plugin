@@ -69,8 +69,8 @@ git clone https://github.com/verl-project/verl-hardware-plugin.git
 cd verl-hardware-plugin
 pip install -e .
 
-# Intsall other packages
+# Install other packages
 cd verl-hardware-plugin
-pip install -r docs/user_guide_mlu/requirements_mlu.txt 
+pip install -r docs/accelerators/mlu/requirements_mlu.txt
 ```
 Other dependency like vLLM, Ray are already installed in cambricon images. Now you can run a verl script.

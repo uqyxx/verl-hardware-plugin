@@ -4,7 +4,7 @@ Last updated: 12/10/2026.
 
 This guide walks you through running a GRPO training job with verl on the Cambricon platform. Make sure you have completed the [Installation Guide](./install_guidance.md) first.
 
-## Environment Setup 
+## Environment Setup
 **1.**
 Please use Cambricon release docker images to run verl and make sure you are in pytorch_infer env.
 
@@ -29,7 +29,7 @@ Run verl scripts
 
 Run scripts in [verl examples](https://github.com/verl-project/verl/tree/main/examples).
 
-We strongly recommend using Ray to lanuch the task to make sure all env vars are set correctly. For example, in the script below, we use `ray job submit` to launch the job and pass `--runtime-env` parameter to set all env vars.
+We strongly recommend using Ray to launch the task to make sure all env vars are set correctly. For example, in the script below, we use `ray job submit` to launch the job and pass `--runtime-env` parameter to set all env vars.
 
 ```bash
 #!/bin/bash
