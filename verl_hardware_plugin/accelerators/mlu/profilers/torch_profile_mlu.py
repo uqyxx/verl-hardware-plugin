@@ -35,19 +35,21 @@ def _patch_tool_config():
         if not isinstance(self.contents, list):
             raise AssertionError(f"Profiler contents must be of type list, got {type(self.contents)}")
 
-        # contents is a frozen-dataclass field -- direct assignment raises
-        # FrozenInstanceError even from the class's own __post_init__. Delegate
-        # to the saved original (with "mlu" filtered out) instead of
-        # reimplementing its whitelist/token-range checks here, so any other
-        # platform's contribution to the real __post_init__ (e.g. a plugin's
-        # torch_profiler_content_name()) still takes effect instead of being
-        # silently discarded.
-        saved_contents = self.contents
-        object.__setattr__(self, "contents", [c for c in saved_contents if c != "mlu"])
-        try:
-            _original_post_init(self)
-        finally:
-            object.__setattr__(self, "contents", saved_contents)
+        for content in self.contents:
+            if content == "mlu":
+                continue
+            assert content in ["cuda", "cpu", "memory", "shapes", "stack"], (
+                f"Profiler contents only supports mlu, cuda, cpu, memory, shapes, stack, but gets {content}"
+            )
+
+        start = getattr(self, "profile_token_start", None)
+        stop = getattr(self, "profile_token_end", None)
+        for name, value in (("profile_token_start", start), ("profile_token_end", stop)):
+            if value is not None:
+                assert isinstance(value, int), f"{name} must be int or None, got {type(value)}"
+                assert value >= 0, f"{name} must be >= 0, got {value}"
+        if start is not None and stop is not None:
+            assert stop > start, f"profile_token_end must be > profile_token_start, got start={start}, stop={stop}"
 
     TorchProfilerToolConfig.__post_init__ = _patched_post_init
     logger.info("[verl_hardware_plugin] Patched TorchProfilerToolConfig: +mlu")
@@ -72,27 +74,7 @@ def _patch_get_torch_profiler():
         profile_step=None,
         schedule=None,
         name_mini_batch_window=False,
-        **kwargs,
     ):
-        # get_torch_profiler's real signature has grown parameters (e.g.
-        # profile_step, name_mini_batch_window) that this hand-copied
-        # reimplementation never learned about. Delegate to the saved
-        # original whenever MLU isn't actually requested, instead of
-        # TypeError'ing on every other platform that hits a newer call site.
-        if not contents or "mlu" not in contents:
-            return _original_get_torch_profiler(
-                contents=contents,
-                save_path=save_path,
-                role=role,
-                save_file_prefix=save_file_prefix,
-                rank=rank,
-                profile_step=profile_step,
-                schedule=schedule,
-                name_mini_batch_window=name_mini_batch_window,
-                **kwargs,
-            )
-        save_dir = os.path.join(save_path, role) if role else save_path
-        os.makedirs(save_dir, exist_ok=True)
 
         if hasattr(tp, "build_trace_basename"):
             base_file_name = tp.build_trace_basename(
@@ -128,17 +110,17 @@ def _patch_get_torch_profiler():
                     first_mb, last_mb = _scheduled_mini_batch_range(step_num)
                     suffix = f"_mb{first_mb}" if first_mb == last_mb else f"_mb{first_mb}-{last_mb}"
                 else:
-                    suffix = f"_part{idx}" if idx else ""
+                    suffix = f"_part{idx}"
+                # Always append callback counter to ensure unique filenames
+                suffix = f"{suffix}_c{idx}"
             elif idx:
-                suffix = f"_cycle{idx}"
-            out_path = os.path.join(save_dir, f"{base_file_name}{suffix}.json.gz")
-            logger.info("[Profiler] Saving trace to %s", out_path)
+                suffix = f"_part{idx}"
+            out_path = os.path.join(save_path, f"{base_file_name}{suffix}.json.gz")
+            print(f"[Profiler] Saving trace to {out_path}")
             prof.export_chrome_trace(out_path)
 
         _contents = set(contents) if contents else set()
-        activities = []
-        if not _contents or "cpu" in _contents:
-            activities.append(torch.profiler.ProfilerActivity.CPU)
+        activities = [torch.profiler.ProfilerActivity.CPU]
 
         if not _contents or "mlu" in _contents:
             if hasattr(torch.profiler.ProfilerActivity, "MLU"):
