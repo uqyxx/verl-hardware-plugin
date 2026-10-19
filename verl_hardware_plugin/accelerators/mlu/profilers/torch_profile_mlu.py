@@ -72,7 +72,7 @@ def _patch_get_torch_profiler():
         profile_step=None,
         schedule=None,
         name_mini_batch_window=False,
-        **kwargs
+        **kwargs,
     ):
         # get_torch_profiler's real signature has grown parameters (e.g.
         # profile_step, name_mini_batch_window) that this hand-copied
