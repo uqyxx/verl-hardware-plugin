@@ -72,7 +72,23 @@ def _patch_get_torch_profiler():
         profile_step=None,
         schedule=None,
         name_mini_batch_window=False,
+        **kwargs
     ):
+        # get_torch_profiler's real signature has grown parameters (e.g.
+        # profile_step, name_mini_batch_window) that this hand-copied
+        # reimplementation never learned about. Delegate to the saved
+        # original whenever MLU isn't actually requested, instead of
+        # TypeError'ing on every other platform that hits a newer call site.
+        if not contents or "mlu" not in contents:
+            return _original_get_torch_profiler(
+                contents=contents,
+                save_path=save_path,
+                role=role,
+                save_file_prefix=save_file_prefix,
+                rank=rank,
+                schedule=schedule,
+                **kwargs,
+            )
 
         if hasattr(tp, "build_trace_basename"):
             base_file_name = tp.build_trace_basename(
