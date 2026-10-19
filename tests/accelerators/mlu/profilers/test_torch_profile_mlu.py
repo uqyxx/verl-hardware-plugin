@@ -54,12 +54,14 @@ def test_get_torch_profiler_accepts_new_kwargs_for_non_mlu_contents(tmp_path):
 
     assert prof is not None
 
+
 def test_trace_filenames_unique_on_window_boundary_stop(tmp_path):
     """
     This test ensures filenames remain unique by verifying that two trace files
     are created with distinct "_c0" and "_c1" callback counter suffixes.
     """
     import os
+
     torch_profile_mlu._patch_get_torch_profiler()
 
     # Create a real torch profiler instance with schedule
@@ -84,15 +86,9 @@ def test_trace_filenames_unique_on_window_boundary_stop(tmp_path):
             prof.step()
 
     # Check that two trace files were created with unique callback counter suffixes
-    trace_files = sorted(
-        f
-        for f in os.listdir(save_dir)
-        if f.startswith("test-boundary") and f.endswith(".json.gz")
-    )
+    trace_files = sorted(f for f in os.listdir(save_dir) if f.startswith("test-boundary") and f.endswith(".json.gz"))
 
-    assert (
-        len(trace_files) == 2
-    ), f"Expected 2 trace files, got {len(trace_files)}: {trace_files}"
+    assert len(trace_files) == 2, f"Expected 2 trace files, got {len(trace_files)}: {trace_files}"
 
     # Verify callback counter suffixes are unique (_c0 and _c1)
     assert "_c0" in trace_files[0], f"Expected _c0 suffix in {trace_files[0]}"
