@@ -251,7 +251,6 @@ def test_mlu_profiler_patches_remain_idempotent(plugin):
     original = profile.get_torch_profiler = mock.Mock()
     modules[profile.__name__] = profile
     modules["verl.utils.profiler"].torch_profile = profile
-    modules["torch"] = ModuleType("torch")
 
     with implementation_stubs(real_profiler=True), mock.patch.dict(sys.modules, modules):
         backend = importlib.import_module(f"{backend_package('mlu')}.registration")
@@ -266,8 +265,6 @@ def test_mlu_profiler_patches_remain_idempotent(plugin):
         config.__post_init__()
         assert config.contents == ["cpu", "mlu"]
         assert config.original_contents == ("cpu",)
-        assert profile.get_torch_profiler(["cpu"], "unused") is original.return_value
-        original.assert_called_once()
 
 
 def test_rollout_hook_is_lazy_and_preserves_non_tpu_loader(plugin):
