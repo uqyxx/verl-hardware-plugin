@@ -1056,47 +1056,25 @@ def efficient_entropy_backward_kernel_general_mainloop_MN(
 
 
 def _entropy_backward_d_hidden_configs():
-    """Per-part autotune list, tuned with tuning/sweep_backward_kernels.py.
-
-    Parts differ in on-chip memory: 512 KB-NRAM parts vs 1 MB-NRAM parts
-    (e.g. MLU692/M9). The two winner sets are mutually incompatible — a config
-    tuned on one part can exhaust NRAM/SRAM on the other, so pick by
-    ``max_nram_size`` instead of merging the lists.
-    """
-    if _devprob.get("max_nram_size", 0) >= 1024 * 1024:
-        # 1 MB-NRAM parts: 1.00x on every shape in results_local.jsonl
-        return [
-            # large tokens / hidden: overall fastest
-            triton.Config(
-                {"BLOCK_SIZE_M": 128, "BLOCK_SIZE_N": 64, "BLOCK_SIZE_K": 512, "GROUP_SIZE_M": 8},
-                num_stages=1,
-                num_warps=1,
-            ),
-            # hidden_size=8192-class shapes
-            triton.Config(
-                {"BLOCK_SIZE_M": 128, "BLOCK_SIZE_N": 64, "BLOCK_SIZE_K": 256, "GROUP_SIZE_M": 8},
-                num_stages=3,
-                num_warps=1,
-            ),
-            # small / odd shapes (e.g. correctness-guard sizes)
-            triton.Config(
-                {"BLOCK_SIZE_M": 128, "BLOCK_SIZE_N": 128, "BLOCK_SIZE_K": 256, "GROUP_SIZE_M": 8},
-                num_stages=3,
-                num_warps=4,
-            ),
-        ]
-    # 512 KB-NRAM parts: 1.00x on every shape in results.jsonl / results_refine.jsonl
     return [
-        # best on every training shape scanned
         triton.Config(
-            {"BLOCK_SIZE_M": 256, "BLOCK_SIZE_N": 64, "BLOCK_SIZE_K": 512, "GROUP_SIZE_M": 8},
-            num_stages=2,
-            num_warps=4,
+            {"BLOCK_SIZE_M": 128, "BLOCK_SIZE_N": 64, "BLOCK_SIZE_K": 512, "GROUP_SIZE_M": 8},
+            num_stages=1,
+            num_warps=1,
         ),
-        # small / odd shapes (e.g. correctness-guard sizes)
+        triton.Config(
+            {"BLOCK_SIZE_M": 128, "BLOCK_SIZE_N": 64, "BLOCK_SIZE_K": 256, "GROUP_SIZE_M": 8},
+            num_stages=3,
+            num_warps=1,
+        ),
         triton.Config(
             {"BLOCK_SIZE_M": 128, "BLOCK_SIZE_N": 128, "BLOCK_SIZE_K": 256, "GROUP_SIZE_M": 8},
             num_stages=3,
+            num_warps=4,
+        ),
+        triton.Config(
+            {"BLOCK_SIZE_M": 256, "BLOCK_SIZE_N": 64, "BLOCK_SIZE_K": 512, "GROUP_SIZE_M": 8},
+            num_stages=2,
             num_warps=4,
         ),
     ]
@@ -1256,39 +1234,21 @@ def efficient_entropy_backward_kernel_d_hidden(
 
 
 def _entropy_backward_d_weight_configs():
-    """Per-part autotune list, tuned with tuning/sweep_backward_kernels.py.
-
-    Same NRAM-based part split as ``_entropy_backward_d_hidden_configs``; the
-    two winner sets are mutually incompatible (NRAM/SRAM overflow across parts).
-    """
-    if _devprob.get("max_nram_size", 0) >= 1024 * 1024:
-        # 1 MB-NRAM parts, tuned on MLU692/M9 (results_local.jsonl). Pruned:
-        # the dropped (256,64,512,s2,w4) twin only beat (256,64,512,s3,w4) by
-        # ~2% on the small correctness-guard shape (noise-level elsewhere).
-        return [
-            # best on hidden_size>=4096 shapes
-            triton.Config(
-                {"BLOCK_SIZE_M": 256, "BLOCK_SIZE_N": 64, "BLOCK_SIZE_K": 512, "GROUP_SIZE_M": 8},
-                num_stages=3,
-                num_warps=4,
-            ),
-            # best on hidden_size=2048-class shapes
-            triton.Config(
-                {"BLOCK_SIZE_M": 128, "BLOCK_SIZE_N": 64, "BLOCK_SIZE_K": 256, "GROUP_SIZE_M": 8},
-                num_stages=3,
-                num_warps=1,
-            ),
-        ]
-    # 512 KB-NRAM parts, tuned on m9dk (results.jsonl / results_refine.jsonl).
-    # Pruned to a single config: the dropped (256,64,512,s3,w4) was only ~1%
-    # ahead on training shapes (noise-level) and ~2% ahead on the small
-    # correctness-guard shape.
     return [
-        # best or within ~1% on every training shape scanned
         triton.Config(
             {"BLOCK_SIZE_M": 128, "BLOCK_SIZE_N": 128, "BLOCK_SIZE_K": 512, "GROUP_SIZE_M": 8},
             num_stages=3,
             num_warps=4,
+        ),
+        triton.Config(
+            {"BLOCK_SIZE_M": 256, "BLOCK_SIZE_N": 64, "BLOCK_SIZE_K": 512, "GROUP_SIZE_M": 8},
+            num_stages=3,
+            num_warps=4,
+        ),
+        triton.Config(
+            {"BLOCK_SIZE_M": 128, "BLOCK_SIZE_N": 64, "BLOCK_SIZE_K": 256, "GROUP_SIZE_M": 8},
+            num_stages=3,
+            num_warps=1,
         ),
     ]
 
